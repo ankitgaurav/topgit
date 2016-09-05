@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TopGit</title>
+	<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body style="background: url(giftly.png);background-repeat: repeat;">
+	<nav class="navbar navbar-default">
+	  <div class="container">
+	    <div class="navbar-header">
+	      <a class="navbar-brand" href="#">
+	      <span style="font-size:24px;font-weight:900;font-family:monospace">TopGit</span>
+	      <span class="title-info">- finding the best github projects</span>
+	      </a>
+	      <a href="#" class="navbar-right navbar-brand">
+	      	<img src="github.png">
+	      </a>
+	    </div>
+	  </div>
+	</nav>
+	
+	<div class="container" style="background-color:#fff; padding:20px;">
+		<div class="row">
+			<div class="col col-md-8">
+				<div class="search-div">
+					    <div class="input-group input-group-lg" id="search_box">
+					      <input type="search" id="search-text" name="search_keyword" placeholder="Search by language" value="php"class="form-control" required="" list="languages">
+					      <datalist id="languages">
+							</datalist>
+					      <span class="input-group-btn">
+					      <button class="btn btn-primary btn-lg search-btn">Search</button>
+					      </span>
+					  </div>
+				</div>
+				<hr>
+				<div class="alert alert-success repos-count-alert">
+					<center>Loading the list of repos...</center>
+				</div>
+				<div class="results-div">
+					
+				</div>
+				<ul class="pager">
+				  <li class="previous"><a href="#">Previous</a></li>
+				  <li class="next"><a href="#">Next</a></li>
+				</ul>
+			</div>
+			<div class="col col-md-3">
+				<div class="panel panel-danger">
+				  <div class="panel-heading" style="text-align:center">
+				  <span class="glyphicon glyphicon-hourglass"></span> Rate Limit</div>
+				  <div class="panel-body rate-limit-div" style="text-align:center">
+				  </div>
+				</div>
+				<div class="panel panel-warning">
+				  <div class="panel-heading" style="text-align:center">
+					  <span class="glyphicon glyphicon-star"></span></span>
+					  <span class="glyphicon glyphicon-star"></span> Stars 
+					  <span class="glyphicon glyphicon-star"></span>
+					  <span class="glyphicon glyphicon-star"></span>
+				  </div>
+				  <div class="panel-body">
+				  	<div class="row">
+				  		<div class="col-md-1">0</div>
+				  		<div class="col-md-8">
+				  			<input oninput="showVal(this.value)" onchange="showVal(this.value)" type="range" id="stars-count-value" name="stars-slider" min="0" max="1000" style="display:inline"/>
+				  		</div>
+				  		<div class="col-md-2">1000</div>				  		
+				  	</div>
+				  	<center id="slider-val">500</center>				  	
+				  </div>
+				</div>
+				<div class="panel panel-success">
+					<div class="panel-heading" style="text-align:center">Made by</div>
+    				<div class="panel-body" style="text-align:center">
+    				<a href="http://ankitgaurav.com">Ankit Gaurav</a></div>
+  				</div>
+			</div>
+		</div>
+	</div>
+
+<script type="text/javascript">
+	var showVal = function(val){
+		document.getElementById("slider-val").innerHTML = val;
+	}
+
+	$(function(){
+		var showLoadingGif = function(){
+			$(".results-div").html('<center><img src="loading.gif"/></center>');
+		}
+		var fetchLanguagesList = function(){
+			$.ajax({
+			  url: 'https://gist.githubusercontent.com/mayurah/5a4d45d12615d52afc4d1c126e04c796/raw/ccbba9bb09312ae66cf85b037bafc670356cf2c9/languages.json',
+			  type: 'GET',
+			  success: function(langList) {
+			  	var arr = $.parseJSON(langList)
+			  	arr.forEach(function(lang){
+			  		$("#languages").append('<option value='+lang+'>')
+			  	})
+			  }
+			})
+		}
+		var queryRateLimits = function(){
+			var limit; var remaining;
+			$.ajax({
+			  url: 'https://api.github.com/rate_limit',
+			  type: 'GET',
+			  success: function(data) {
+			  	limit = data.resources.search.limit;
+			  	remaining = data.resources.search.remaining;
+			  	if(remaining == 0){
+			  		//alert("You have exhausted the quota for the given search query.\nPlease reload the page.")
+			  	}
+			  	$(".rate-limit-div").html(remaining+" out of "+limit);
+			  }
+			})
+		}
+		var queryFunction = function(page){
+			showLoadingGif();
+			language = $("#search-text").val();
+			starsCount = $("#stars-count-value").val();
+			$.ajax({
+			  url: 'https://api.github.com/search/repositories?q=stars:>='+starsCount+'+language:'+language+'&sort=stars&order=desc&page='+page+'&per_page=5',
+			  type: 'GET',
+			  success: function(data) {
+			  	$(".results-div").html("");
+			  	reposCount = data.total_count;
+			  	$(".repos-count-alert").html('We have found <strong>'+reposCount+'</strong> repositories in <strong>'+language+"</strong> that have more than <strong>"+starsCount+"</strong> stars.");
+			  	var items = data.items;
+			  	items.forEach(function(item){
+			  		repoName = item.name;
+			  		description = item.description;
+			  		repoUrl = item.html_url;
+			  		$(".results-div").append('<div class="well" style="margin-bottom:0px; border-radius:0"><div class="repo-name text-success"><div style="font-size:20px"><span class="glyphicon glyphicon-hand-right"></span> &nbsp;<a  target="_blank" href="'+ repoUrl+'">'+ repoName +'</a></div></div><span class="repo-language text-info" style="margin-right:30px">Language: '+ language +'</span><span class="repo-description">'+ description +'</span></div>');
+			  	})
+			  }
+			})
+			queryRateLimits();
+		};
+
+		var page = 1;
+		if(page<=1){
+			$(".previous").hide();
+		}
+		queryFunction(page);
+		fetchLanguagesList();
+		$(".search-btn").click(function(){
+  			queryFunction(page);
+		});
+		$(".previous").click(function(){
+			page--;
+			if(page==1){
+				$(".previous").hide();
+			}
+			queryFunction(page);
+		});
+		$(".next").click(function(){
+			page++;
+			if(page!=1){
+				$(".previous").show();
+			}
+			queryFunction(page);
+		})
+	});
+</script>
+</body>
+
+</html>
